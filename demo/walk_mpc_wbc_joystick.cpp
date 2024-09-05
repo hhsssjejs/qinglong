@@ -193,6 +193,9 @@ int main(int argc, char **argv) {
                 footPlacement.dataBusWrite(RobotState);
 			}
 
+            kinDynSolver.update_odometry();
+            kinDynSolver.dataBusWriteOdemetry(RobotState);
+
 			if (simTime <= openLoopCtrTime || RobotState.motionState==DataBus::Walk2Stand) {
                 WBC_solv.setQini(qIniDes, RobotState.q);
                 WBC_solv.fe_l_pos_des_W=RobotState.fe_l_pos_W;
@@ -203,19 +206,43 @@ int main(int argc, char **argv) {
             }
 
             // ------------- MPC ------------
-			MPC_count = MPC_count + 1;
-            if (MPC_count > (dt_200Hz / dt - 1)) { //MPC_count = 1, 2, 3, 4, 5(5 run MPC)
-                MPC_solv.dataBusRead(RobotState);
-                MPC_solv.cal();
-                MPC_solv.dataBusWrite(RobotState);
-                MPC_count = 0;
+            MPC_count = MPC_count + 1;
+            if (MPC_count >
+                (dt_200Hz / dt - 1)) { // MPC_count = 1, 2, 3, 4, 5(5 run MPC)
+              timespec time_start_wbc;
+              clock_gettime(CLOCK_MONOTONIC, &time_start_wbc);
+              MPC_solv.dataBusRead(RobotState);
+              MPC_solv.cal();
+              MPC_solv.dataBusWrite(RobotState);
+              MPC_count = 0;
+              timespec time_end_wbc;
+              clock_gettime(CLOCK_MONOTONIC, &time_end_wbc);
+              double calc_time =
+                  1e-6 * static_cast<int64_t>(
+                             (time_end_wbc.tv_nsec - time_start_wbc.tv_nsec) +
+                             1000000000 *
+                                 (time_end_wbc.tv_sec - time_start_wbc.tv_sec));
+
+            //   std::cerr << "mpc time: " << calc_time << " ms" << std::endl;
             }
             // ------------- WBC ------------
             // WBC Calculation
+            timespec time_start_wbc;
+            clock_gettime(CLOCK_MONOTONIC, &time_start_wbc);
             WBC_solv.dataBusRead(RobotState);
             WBC_solv.computeDdq(kinDynSolver);
             WBC_solv.computeTau();
             WBC_solv.dataBusWrite(RobotState);
+
+            timespec time_end_wbc;
+            clock_gettime(CLOCK_MONOTONIC, &time_end_wbc);
+            double calc_time =
+                1e-6 *
+                static_cast<int64_t>(
+                    (time_end_wbc.tv_nsec - time_start_wbc.tv_nsec) +
+                    1000000000 * (time_end_wbc.tv_sec - time_start_wbc.tv_sec));
+
+            // std::cerr << "wbc time: " << calc_time << " ms" << std::endl;
 
             // get the final joint command
             if (simTime <= openLoopCtrTime) {

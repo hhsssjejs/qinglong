@@ -36,6 +36,14 @@ Pin_KinDyn::Pin_KinDyn(std::string urdf_pathIn) {
     dyn_C=Eigen::MatrixXd::Zero(model_nv,model_nv);
     dyn_G=Eigen::MatrixXd::Zero(model_nv,1);
 
+    // Create KalmanFilterEstimate
+    line_acc_.setZero();
+    KalmanFilterEstimate_ = std::make_shared<KalmanFilterEstimate>();
+    stance_phase_.resize(2);
+    end_rel_pos_world_.resize(2);
+    end_rel_vel_world_.resize(2);
+    body_state.setZero();
+
     // get joint index for Pinocchio Lib, need to redefined the joint name for new model
     r_ankle_joint=model_biped.getJointId("J_ankle_r_roll");
     l_ankle_joint=model_biped.getJointId("J_ankle_l_roll");
@@ -84,6 +92,33 @@ void Pin_KinDyn::dataBusRead(const DataBus &robotState) {
     dq.block(0,0,3,1)=robotState.base_rot.transpose()*dq.block(0,0,3,1);
     dq.block(3,0,3,1)=robotState.base_rot.transpose()*dq.block(3,0,3,1);
     ddq=robotState.ddq;
+    line_acc_ << robotState.baseAcc[0], robotState.baseAcc[1], robotState.baseAcc[2];
+
+
+    if (robotState.motionState!=DataBus::Stand && robotState.legState == DataBus::LSt) {
+        stance_phase_.clear();
+        stance_phase_.push_back(true);  
+        stance_phase_.push_back(false);
+    } else if (robotState.motionState!=DataBus::Stand && robotState.legState == DataBus::RSt) {
+        stance_phase_.clear();
+        stance_phase_.push_back(false); 
+        stance_phase_.push_back(true);  
+    } else {
+        stance_phase_.clear();
+        stance_phase_.push_back(true);  
+        stance_phase_.push_back(true);  
+    }
+    Eigen::Vector3d w_ = dq.segment(3,3);
+    end_rel_pos_world_[0] = base_rot * fe_l_pos_body;
+    end_rel_pos_world_[1] = base_rot * fe_r_pos_body;
+    end_rel_vel_world_[0] = base_rot * (fe_l_vel + w_.cross(fe_l_pos_body));
+    end_rel_vel_world_[1] = base_rot * (fe_r_vel + w_.cross(fe_r_pos_body));
+    std::cerr << "stance left:  " << stance_phase_[0]
+              << "  right:" << stance_phase_[1] << std::endl;
+    std::cerr << "pos left:  " << fe_l_pos_body[0].transpose()
+              << "  right:" << fe_l_pos_body[1].transpose() << std::endl;
+    std::cerr << "vel left:  " << end_rel_vel_world_[0].transpose()
+              << "  right:" << end_rel_vel_world_[1].transpose() << std::endl;
 }
 
 void Pin_KinDyn::dataBusWrite(DataBus &robotState) {
@@ -100,7 +135,7 @@ void Pin_KinDyn::dataBusWrite(DataBus &robotState) {
     robotState.J_hip_link=J_hip_link;
     robotState.fe_l_pos_W=fe_l_pos;
     robotState.fe_r_pos_W=fe_r_pos;
-    robotState.fe_l_pos_L=fe_l_pos_body;
+    robotState.fe_l_pos_L=fe_l_pos_body;   
     robotState.fe_r_pos_L=fe_r_pos_body;
     robotState.fe_l_rot_W=fe_l_rot;
     robotState.fe_r_rot_W=fe_r_rot;
@@ -135,6 +170,29 @@ void Pin_KinDyn::dataBusWrite(DataBus &robotState) {
     robotState.inertia = inertia;  // w.r.t body frame
 
 
+}
+
+void Pin_KinDyn::dataBusWriteOdemetry(DataBus &robotState) {
+    // robotState.basePos[0]=body_state[0];
+    // robotState.basePos[1]=body_state[1];
+    // robotState.basePos[2]=body_state[2];
+    // robotState.baseLinVel[0]=body_state[3];
+    // robotState.baseLinVel[1]=body_state[4];
+    // robotState.baseLinVel[2]=body_state[5];
+    std::cerr << "actual pos: " << body_state.segment(0, 3).transpose()
+              << std::endl;
+    std::cerr << "actual vel: " << body_state.segment(3, 3).transpose()
+              << std::endl;
+} 
+
+
+
+
+void Pin_KinDyn::update_odometry() {
+
+  KalmanFilterEstimate_->update(base_rot, line_acc_, stance_phase_,
+                                end_rel_pos_world_, end_rel_vel_world_);
+  body_state = KalmanFilterEstimate_->getBodyVelWorld();
 }
 
 // update jacobians and joint positions
@@ -177,6 +235,7 @@ void Pin_KinDyn::computeJ_dJ() {
     hd_l_rot=data_biped.oMi[l_hand_joint].rotation();
     hd_r_pos=data_biped.oMi[r_hand_joint].translation();
     hd_r_rot=data_biped.oMi[r_hand_joint].rotation();
+
 //    hip_link_pos=(data_biped.oMi[l_hip_roll_joint].translation()+data_biped.oMi[r_hip_roll_joint].translation())*0.5;
 //    hip_link_rot=data_biped.oMi[l_hip_roll_joint].rotation();
     hip_link_pos=data_biped.oMi[waist_yaw_joint].translation();
@@ -214,6 +273,12 @@ void Pin_KinDyn::computeJ_dJ() {
     hd_l_rot_body=data_biped_fixed.oMi[l_hand_joint_fixed].rotation();
     hd_r_pos_body=data_biped_fixed.oMi[r_hand_joint_fixed].translation();
     hd_r_rot_body=data_biped_fixed.oMi[r_hand_joint_fixed].rotation();
+    pinocchio::Motion motion_l = pinocchio::getFrameVelocity(
+        model_biped_fixed, data_biped_fixed, l_ankle_joint_fixed, pinocchio::LOCAL_WORLD_ALIGNED);
+    fe_l_vel = motion_l.linear();
+    pinocchio::Motion motion_r = pinocchio::getFrameVelocity(
+        model_biped_fixed, data_biped_fixed, r_ankle_joint_fixed, pinocchio::LOCAL_WORLD_ALIGNED);
+    fe_r_vel = motion_r.linear();
 }
 
 Eigen::Quaterniond Pin_KinDyn::intQuat(const Eigen::Quaterniond &quat, const Eigen::Matrix<double, 3, 1> &w) {

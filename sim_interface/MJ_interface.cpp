@@ -109,6 +109,10 @@ void MJ_Interface::dataBusWrite(DataBus &busIn) {
     busIn.baseAngVel[1]=baseAngVel[1];
     busIn.baseAngVel[2]=baseAngVel[2];
     busIn.updateQ();
+    std::cerr << "mujoco pos : " << basePos[0] << "  " << basePos[1] << "  "
+              << basePos[2] << std::endl;
+    std::cerr << "mujoco vel : " << baseLinVel[0] << "  " << baseLinVel[1] << "  "
+              << baseLinVel[2] << std::endl;
 }
 
 

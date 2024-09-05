@@ -21,6 +21,7 @@ Feel free to use in any purpose, and cite OpenLoong-Dynamics-Control in any styl
 #include <string>
 #include "json/json.h"
 #include <vector>
+#include "LinearKalmanFilter.h"
 
 class Pin_KinDyn {
 public:
@@ -51,6 +52,7 @@ public:
     Eigen::Matrix<double,6,-1> dJ_r,dJ_l, dJ_hd_r, dJ_hd_l, dJ_base, dJ_hip_link;
     Eigen::Matrix<double,3,-1> Jcom;
     Eigen::Vector3d fe_r_pos, fe_l_pos, base_pos;    // foot-end position in world frame
+    Eigen::Vector3d fe_l_vel, fe_r_vel;
     Eigen::Vector3d fe_r_pos_body, fe_l_pos_body;  // foot-end position in body frame
     Eigen::Vector3d hd_r_pos, hd_l_pos;  // hand position in world frame
     Eigen::Vector3d hd_r_pos_body, hd_l_pos_body; // hand position in body frame
@@ -86,6 +88,15 @@ public:
     Eigen::VectorXd integrateDIY(const Eigen::VectorXd &qI, const Eigen::VectorXd &dqI);
     static Eigen::Quaterniond intQuat(const Eigen::Quaterniond &quat, const Eigen::Matrix<double,3,1> &w);
     void workspaceConstraint(Eigen::VectorXd &qFT, Eigen::VectorXd &tauJointFT);
+
+    std::shared_ptr<KalmanFilterEstimate> KalmanFilterEstimate_;
+    void update_odometry();
+    void dataBusWriteOdemetry(DataBus &robotState);
+    Eigen::Vector3d line_acc_;
+    std::vector<bool> stance_phase_;
+    std::vector<Eigen::Vector3d> end_rel_pos_world_;
+    std::vector<Eigen::Vector3d> end_rel_vel_world_;
+    Eigen::VectorXd body_state;
 private:
     pinocchio::Data data_biped, data_biped_fixed;
 
