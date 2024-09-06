@@ -33,30 +33,30 @@ public:
     body_vel.tail(3) = xHat_.segment<3>(3);
     return std::move(body_vel);
   }
-  scalar_t dt = 0.001;
+  double dt = 0.001;
 
 protected:
 
   vector_t feetHeights_;
 
   // Config
-  scalar_t footRadius_ = 0.02;
-  scalar_t imuProcessNoisePosition_ = 0.02;
-  scalar_t imuProcessNoiseVelocity_ = 0.02;
-  scalar_t footProcessNoisePosition_ = 0.5;
-  scalar_t footSensorNoisePosition_ = 0.5;
-  scalar_t footSensorNoiseVelocity_ = 0.1;
-  scalar_t footHeightSensorNoise_ = 0.01;
+  double footRadius_ = 0.02;
+  double imuProcessNoisePosition_ = 0.02;
+  double imuProcessNoiseVelocity_ = 0.02;
+  double footProcessNoisePosition_ = 0.002;
+  double footSensorNoisePosition_ = 0.001;
+  double footSensorNoiseVelocity_ = 0.05;
+  double footHeightSensorNoise_ = 0.001;
 
 private:
-  Eigen::Matrix<scalar_t, 12, 1> xHat_;
-  Eigen::Matrix<scalar_t, 6, 1> ps_;
-  Eigen::Matrix<scalar_t, 6, 1> vs_;
-  Eigen::Matrix<scalar_t, 12, 12> a_;
-  Eigen::Matrix<scalar_t, 12, 12> q_;
-  Eigen::Matrix<scalar_t, 12, 12> p_;
-  Eigen::Matrix<scalar_t, 14, 14> r_;
-  Eigen::Matrix<scalar_t, 12, 3> b_;
-  Eigen::Matrix<scalar_t, 14, 12> c_;
+  Eigen::Matrix<double, 12, 1> xHat_;
+  Eigen::Matrix<double, 6, 1> ps_;
+  Eigen::Matrix<double, 6, 1> vs_;
+  Eigen::Matrix<double, 12, 12> a_;
+  Eigen::Matrix<double, 12, 12> q_;
+  Eigen::Matrix<double, 12, 12> p_;
+  Eigen::Matrix<double, 14, 14> r_;
+  Eigen::Matrix<double, 12, 3> b_;
+  Eigen::Matrix<double, 14, 12> c_;
 
 };

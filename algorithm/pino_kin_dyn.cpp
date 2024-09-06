@@ -194,22 +194,22 @@ void Pin_KinDyn::update_odometry(DataBus &robotState) {
   std::cerr << "stance left:  " << stance_phase_[0]
             << "  right:" << stance_phase_[1] << std::endl;
 
-  Eigen::Vector3d w_ = dq.segment(3,3);
-  end_rel_pos_world_[0] = base_rot * fe_l_pos_body;
-  end_rel_pos_world_[1] = base_rot * fe_r_pos_body;
-  end_rel_vel_world_[0] = base_rot * (fe_l_vel + w_.cross(fe_l_pos_body));
-  end_rel_vel_world_[1] = base_rot * (fe_r_vel + w_.cross(fe_r_pos_body));
-  std::cerr << "pos left:  " << end_rel_pos_world_[0].transpose()
-            << "  right:" << end_rel_pos_world_[1].transpose() << std::endl;
-  std::cerr << "vel left:  " << end_rel_vel_world_[0].transpose()
-            << "  right:" << end_rel_vel_world_[1].transpose() << std::endl;
+//   Eigen::Vector3d w_ = dq.segment(3,3);
+//   end_rel_pos_world_[0] = base_rot * fe_l_pos_body;
+//   end_rel_pos_world_[1] = base_rot * fe_r_pos_body;
+//   end_rel_vel_world_[0] = base_rot * (fe_l_vel + w_.cross(fe_l_pos_body));
+//   end_rel_vel_world_[1] = base_rot * (fe_r_vel + w_.cross(fe_r_pos_body));
+//   std::cerr << "pos left:  " << end_rel_pos_world_[0].transpose()
+//             << "  right:" << end_rel_pos_world_[1].transpose() << std::endl;
+//   std::cerr << "vel left:  " << end_rel_vel_world_[0].transpose()
+//             << "  right:" << end_rel_vel_world_[1].transpose() << std::endl;
 
   end_rel_pos_world_[0] = fe_l_pos_final;
   end_rel_pos_world_[1] = fe_r_pos_final;
   end_rel_vel_world_[0] = fe_l_vel_final;
   end_rel_vel_world_[1] = fe_r_vel_final;
-  std::cerr << "pos left:  " << end_rel_pos_world_[0].transpose()
-            << "  right:" << end_rel_pos_world_[1].transpose() << std::endl;
+//   std::cerr << "pos left:  " << end_rel_pos_world_[0].transpose()
+//             << "  right:" << end_rel_pos_world_[1].transpose() << std::endl;
   std::cerr << "vel left:  " << end_rel_vel_world_[0].transpose()
             << "  right:" << end_rel_vel_world_[1].transpose() << std::endl;
 

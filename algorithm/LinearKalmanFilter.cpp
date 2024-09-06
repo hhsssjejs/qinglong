@@ -23,22 +23,22 @@ KalmanFilterEstimate::KalmanFilterEstimate()
   ps_.setZero();
   vs_.setZero();
   a_.setZero();
-  a_.block(0, 0, 3, 3) = Eigen::Matrix<scalar_t, 3, 3>::Identity();
-  a_.block(0, 3, 3, 3) = dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();
-  a_.block(3, 3, 3, 3) = Eigen::Matrix<scalar_t, 3, 3>::Identity();
-  a_.block(6, 6, 6, 6) = Eigen::Matrix<scalar_t, 6, 6>::Identity();
+  a_.block(0, 0, 3, 3) = Eigen::Matrix<double, 3, 3>::Identity();
+  a_.block(0, 3, 3, 3) = dt * Eigen::Matrix<double, 3, 3>::Identity();
+  a_.block(3, 3, 3, 3) = Eigen::Matrix<double, 3, 3>::Identity();
+  a_.block(6, 6, 6, 6) = Eigen::Matrix<double, 6, 6>::Identity();
   b_.setZero();
-  b_.block(0, 0, 3, 3) = 0.5 * dt * dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();  // additional
-  b_.block(3, 0, 3, 3) = dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  b_.block(0, 0, 3, 3) = 0.5 * dt * dt * Eigen::Matrix<double, 3, 3>::Identity();  // additional
+  b_.block(3, 0, 3, 3) = dt * Eigen::Matrix<double, 3, 3>::Identity();
 
-  Eigen::Matrix<scalar_t, Eigen::Dynamic, Eigen::Dynamic> c1(3, 6);
-  c1 << Eigen::Matrix<scalar_t, 3, 3>::Identity(), Eigen::Matrix<scalar_t, 3, 3>::Zero();
-  Eigen::Matrix<scalar_t, Eigen::Dynamic, Eigen::Dynamic> c2(3, 6);
-  c2 << Eigen::Matrix<scalar_t, 3, 3>::Zero(), Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> c1(3, 6);
+  c1 << Eigen::Matrix<double, 3, 3>::Identity(), Eigen::Matrix<double, 3, 3>::Zero();
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> c2(3, 6);
+  c2 << Eigen::Matrix<double, 3, 3>::Zero(), Eigen::Matrix<double, 3, 3>::Identity();
   c_.setZero();
   c_.block(0, 0, 3, 6) = c1;
   c_.block(3, 0, 3, 6) = c1;
-  c_.block(0, 6, 6, 6) = -Eigen::Matrix<scalar_t, 12, 12>::Identity();
+  c_.block(0, 6, 6, 6) = -Eigen::Matrix<double, 12, 12>::Identity();
   c_.block(6, 0, 3, 6) = c2;
   c_.block(9, 0, 3, 6) = c2;
   c_(13, 11) = 1.0;
@@ -46,12 +46,15 @@ KalmanFilterEstimate::KalmanFilterEstimate()
   p_.setIdentity();
   p_ = 100. * p_;
   q_.setIdentity();
-  q_.block(0, 0, 3, 3) = (dt / 20.f) * Eigen::Matrix<scalar_t, 3, 3>::Identity();
-  q_.block(3, 3, 3, 3) = (dt * 9.81f / 20.f) * Eigen::Matrix<scalar_t, 3, 3>::Identity();
-  q_.block(6, 6, 6, 6) = dt * Eigen::Matrix<scalar_t, 6, 6>::Identity();    
+  q_.block(0, 0, 3, 3) = (dt / 20.f) * Eigen::Matrix<double, 3, 3>::Identity();
+  q_.block(3, 3, 3, 3) = (dt * 9.81f / 20.f) * Eigen::Matrix<double, 3, 3>::Identity();
+  q_.block(6, 6, 6, 6) = dt * Eigen::Matrix<double, 6, 6>::Identity();    
 
   r_.setIdentity();
   feetHeights_.setZero(numContacts); 
+  feetHeights_[0] = 0.0442;
+  feetHeights_[1] = 0.0442;
+
 }
 
 void KalmanFilterEstimate::update(
@@ -70,7 +73,7 @@ void KalmanFilterEstimate::update(
   // qPino.tail(actuatedDofNum) = rbdState_.segment(6, actuatedDofNum);
 
   // vPino.setZero();
-  // vPino.segment<3>(3) = getEulerAnglesZyxDerivativesFromGlobalAngularVelocity<scalar_t>(
+  // vPino.segment<3>(3) = getEulerAnglesZyxDerivativesFromGlobalAngularVelocity<double>(
   //     qPino.segment<3>(3),
   //     rbdState_.segment<3>(generalizedCoordinatesNum));  // Only set angular velocity, let linear velocity be zero
   // vPino.tail(actuatedDofNum) = rbdState_.segment(6 + generalizedCoordinatesNum, actuatedDofNum);
@@ -82,17 +85,32 @@ void KalmanFilterEstimate::update(
   // const auto eeVel = eeKinematics_->getVelocity(vector_t(), vector_t());
 
   // the covariance of the process noise
-  Eigen::Matrix<scalar_t, 12, 12> q = Eigen::Matrix<scalar_t, 12, 12>::Identity();
+  Eigen::Matrix<double, 12, 12> q = Eigen::Matrix<double, 12, 12>::Identity();
+  std::cerr << "Q: " << std::setprecision(10) << q << std::endl;
   q.block(0, 0, 3, 3) = q_.block(0, 0, 3, 3) * imuProcessNoisePosition_;
   q.block(3, 3, 3, 3) = q_.block(3, 3, 3, 3) * imuProcessNoiseVelocity_;
   q.block(6, 6, 6, 6) = q_.block(6, 6, 6, 6) * footProcessNoisePosition_;
-
+  std::cerr << "Q: " << std::setprecision(10) << q << std::endl;
   // the covariance of the observation noise
-  Eigen::Matrix<scalar_t, 14, 14> r = Eigen::Matrix<scalar_t, 14, 14>::Identity();
+  Eigen::Matrix<double, 14, 14> r = Eigen::Matrix<double, 14, 14>::Identity();
   r.block(0, 0, 6, 6) = r_.block(0, 0, 6, 6) * footSensorNoisePosition_;
   r.block(6, 6, 6, 6) = r_.block(6, 6, 6, 6) * footSensorNoiseVelocity_;
   const int fn = numContacts;
   r.block(12, 12, fn, fn) = r_.block(12, 12, fn, fn) * footHeightSensorNoise_;
+
+  std::cerr << " 0.5 * dt * dt  : " << 0.5 * dt * dt << std::endl;
+
+  std::cerr << "imuProcessNoisePosition_: " << imuProcessNoisePosition_ << std::endl;
+  std::cerr << "imuProcessNoiseVelocity_ " << imuProcessNoiseVelocity_ << std::endl;
+  std::cerr << "footProcessNoisePosition_: " << footProcessNoisePosition_ << std::endl;
+  // std::cerr << "A: " << a_ << std::endl;
+  b_(0,0)= 0.5 * dt * dt;
+  std::cerr << "B " << std::setprecision(16) << b_ << std::endl;
+  // std::cerr << "C: " << c_ << std::endl;
+  std::cerr << "Q——: " << q_ << std::endl;
+  // std::cerr << "R——: " << r_ << std::endl;
+  // std::cerr << "Q: " << std::setprecision(10) << q << std::endl;
+  // std::cerr << "R: " << r << std::endl;
 
   for (int i = 0; i < numContacts; i++)
   {
@@ -104,7 +122,7 @@ void KalmanFilterEstimate::update(
     int rIndex3 = 12 + i;
     bool isContact = stance_phase[i];
 
-    scalar_t high_suspect_number(100);
+    double high_suspect_number(100);
     q.block(qIndex, qIndex, 3, 3) = (isContact ? 1. : high_suspect_number) * q.block(qIndex, qIndex, 3, 3);
     r.block(rIndex1, rIndex1, 3, 3) = (isContact ? 1. : high_suspect_number) * r.block(rIndex1, rIndex1, 3, 3);
     r.block(rIndex2, rIndex2, 3, 3) = (isContact ? 1. : high_suspect_number) * r.block(rIndex2, rIndex2, 3, 3);
@@ -119,24 +137,24 @@ void KalmanFilterEstimate::update(
   vector3_t accel = base_rot * lin_acc + g;
 
   // observation (or measurement)
-  Eigen::Matrix<scalar_t, 14, 1> y;
+  Eigen::Matrix<double, 14, 1> y;
   y << ps_, vs_, feetHeights_;
   xHat_ = a_ * xHat_ + b_ * accel;  
-  Eigen::Matrix<scalar_t, 12, 12> at = a_.transpose();
-  Eigen::Matrix<scalar_t, 12, 12> pm = a_ * p_ * at + q;  
-  Eigen::Matrix<scalar_t, 12, 14> cT = c_.transpose();
-  Eigen::Matrix<scalar_t, 14, 1> yModel = c_ * xHat_;
-  Eigen::Matrix<scalar_t, 14, 1> ey = y - yModel;        
-  Eigen::Matrix<scalar_t, 14, 14> s = c_ * pm * cT + r;  
+  Eigen::Matrix<double, 12, 12> at = a_.transpose();
+  Eigen::Matrix<double, 12, 12> pm = a_ * p_ * at + q;  
+  Eigen::Matrix<double, 12, 14> cT = c_.transpose();
+  Eigen::Matrix<double, 14, 1> yModel = c_ * xHat_;
+  Eigen::Matrix<double, 14, 1> ey = y - yModel;        
+  Eigen::Matrix<double, 14, 14> s = c_ * pm * cT + r;  
 
-  Eigen::Matrix<scalar_t, 14, 1> sEy = s.lu().solve(ey);  
+  Eigen::Matrix<double, 14, 1> sEy = s.lu().solve(ey);  
   xHat_ += pm * cT * sEy;                                 
 
-  Eigen::Matrix<scalar_t, 14, 12> sC = s.lu().solve(c_);
-  p_ = (Eigen::Matrix<scalar_t, 12, 12>::Identity() - pm * cT * sC) *
+  Eigen::Matrix<double, 14, 12> sC = s.lu().solve(c_);
+  p_ = (Eigen::Matrix<double, 12, 12>::Identity() - pm * cT * sC) *
        pm;  
 
-  Eigen::Matrix<scalar_t, 12, 12> pt = p_.transpose();
+  Eigen::Matrix<double, 12, 12> pt = p_.transpose();
   p_ = (p_ + pt) / 2.0;
 
   if (p_.block(0, 0, 2, 2).determinant() > 0.000001)
@@ -154,22 +172,22 @@ void KalmanFilterEstimate::resetEstimate()
   ps_.setZero();
   vs_.setZero();
   a_.setZero();
-  a_.block(0, 0, 3, 3) = Eigen::Matrix<scalar_t, 3, 3>::Identity();
-  a_.block(0, 3, 3, 3) = dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();
-  a_.block(3, 3, 3, 3) = Eigen::Matrix<scalar_t, 3, 3>::Identity();
-  a_.block(6, 6, 6, 6) = Eigen::Matrix<scalar_t, 6, 6>::Identity();
+  a_.block(0, 0, 3, 3) = Eigen::Matrix<double, 3, 3>::Identity();
+  a_.block(0, 3, 3, 3) = dt * Eigen::Matrix<double, 3, 3>::Identity();
+  a_.block(3, 3, 3, 3) = Eigen::Matrix<double, 3, 3>::Identity();
+  a_.block(6, 6, 6, 6) = Eigen::Matrix<double, 6, 6>::Identity();
   b_.setZero();
-  b_.block(0, 0, 3, 3) = 0.5 * dt * dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();  // additional
-  b_.block(3, 0, 3, 3) = dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  b_.block(0, 0, 3, 3) = 0.5 * dt * dt * Eigen::Matrix<double, 3, 3>::Identity();  // additional
+  b_.block(3, 0, 3, 3) = dt * Eigen::Matrix<double, 3, 3>::Identity();
 
-  Eigen::Matrix<scalar_t, Eigen::Dynamic, Eigen::Dynamic> c1(3, 6);
-  c1 << Eigen::Matrix<scalar_t, 3, 3>::Identity(), Eigen::Matrix<scalar_t, 3, 3>::Zero();
-  Eigen::Matrix<scalar_t, Eigen::Dynamic, Eigen::Dynamic> c2(3, 6);
-  c2 << Eigen::Matrix<scalar_t, 3, 3>::Zero(), Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> c1(3, 6);
+  c1 << Eigen::Matrix<double, 3, 3>::Identity(), Eigen::Matrix<double, 3, 3>::Zero();
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> c2(3, 6);
+  c2 << Eigen::Matrix<double, 3, 3>::Zero(), Eigen::Matrix<double, 3, 3>::Identity();
   c_.setZero();
   c_.block(0, 0, 3, 6) = c1;
   c_.block(3, 0, 3, 6) = c1;
-  c_.block(0, 6, 6, 6) = -Eigen::Matrix<scalar_t, 12, 12>::Identity();
+  c_.block(0, 6, 6, 6) = -Eigen::Matrix<double, 12, 12>::Identity();
   c_.block(6, 0, 3, 6) = c2;
   c_.block(9, 0, 3, 6) = c2;
   c_(13, 11) = 1.0;
@@ -177,12 +195,14 @@ void KalmanFilterEstimate::resetEstimate()
   p_.setIdentity();
   p_ = 100. * p_;
   q_.setIdentity();
-  q_.block(0, 0, 3, 3) = (dt / 20.f) * Eigen::Matrix<scalar_t, 3, 3>::Identity();
-  q_.block(3, 3, 3, 3) = (dt * 9.81f / 20.f) * Eigen::Matrix<scalar_t, 3, 3>::Identity();
-  q_.block(6, 6, 6, 6) = dt * Eigen::Matrix<scalar_t, 6, 6>::Identity();    
+  q_.block(0, 0, 3, 3) = (dt / 20.f) * Eigen::Matrix<double, 3, 3>::Identity();
+  q_.block(3, 3, 3, 3) = (dt * 9.81f / 20.f) * Eigen::Matrix<double, 3, 3>::Identity();
+  q_.block(6, 6, 6, 6) = dt * Eigen::Matrix<double, 6, 6>::Identity();    
 
   r_.setIdentity();
   feetHeights_.setZero(numContacts); 
+  feetHeights_[0] = 0.0442;
+  feetHeights_[1] = 0.0442;
 }
 
 // void KalmanFilterEstimate::loadSettings(const std::string& taskFile, bool verbose)
