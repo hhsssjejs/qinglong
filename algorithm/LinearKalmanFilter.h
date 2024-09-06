@@ -23,11 +23,12 @@ public:
               const std::vector<Eigen::Vector3d> &end_pos_world,
               const std::vector<Eigen::Vector3d> &end_vel_world);
 
-  void loadSettings(const std::string& taskFile, bool verbose);
+  void resetEstimate();
 
   vector_t getBodyVelWorld()
   {
     vector_t body_vel(6);
+    body_vel.setZero();
     body_vel.head(3) = xHat_.segment<3>(0);
     body_vel.tail(3) = xHat_.segment<3>(3);
     return std::move(body_vel);
@@ -42,8 +43,8 @@ protected:
   scalar_t footRadius_ = 0.02;
   scalar_t imuProcessNoisePosition_ = 0.02;
   scalar_t imuProcessNoiseVelocity_ = 0.02;
-  scalar_t footProcessNoisePosition_ = 0.002;
-  scalar_t footSensorNoisePosition_ = 0.005;
+  scalar_t footProcessNoisePosition_ = 0.5;
+  scalar_t footSensorNoisePosition_ = 0.5;
   scalar_t footSensorNoiseVelocity_ = 0.1;
   scalar_t footHeightSensorNoise_ = 0.01;
 

@@ -116,11 +116,15 @@ int main(int argc, char **argv) {
     while (!glfwWindowShouldClose(uiController.window)) {
         simstart = mj_data->time;
         while (mj_data->time - simstart < 1.0 / 60.0 && uiController.runSim) {
+            timespec time_start_all;
+            clock_gettime(CLOCK_MONOTONIC, &time_start_all);
             mj_step(mj_model, mj_data);
             simTime=mj_data->time;
             // Read the sensors:
             mj_interface.updateSensorValues();
             mj_interface.dataBusWrite(RobotState);
+
+
 
 			// input from joystick
 			// space: start and stop stepping (after 3s)
@@ -169,6 +173,7 @@ int main(int argc, char **argv) {
 
 			if (simTime>=openLoopCtrTime && simTime<openLoopCtrTime+0.002) {
 				RobotState.motionState = DataBus::Stand;
+                kinDynSolver.reset_odometry();
 			}
 
 			if (RobotState.motionState==DataBus::Walk2Stand || simTime<= openLoopCtrTime)
@@ -193,7 +198,7 @@ int main(int argc, char **argv) {
                 footPlacement.dataBusWrite(RobotState);
 			}
 
-            kinDynSolver.update_odometry();
+            kinDynSolver.update_odometry(RobotState);
             kinDynSolver.dataBusWriteOdemetry(RobotState);
 
 			if (simTime <= openLoopCtrTime || RobotState.motionState==DataBus::Walk2Stand) {
@@ -304,6 +309,15 @@ int main(int argc, char **argv) {
 			logger.recItermData("dX_cal",RobotState.dX_cal);
 			logger.recItermData("Ufe",RobotState.Fr_ff);
             logger.finishLine();
+            timespec time_end_all;
+            clock_gettime(CLOCK_MONOTONIC, &time_end_all);
+            double calc_time_all =
+                1e-6 *
+                static_cast<int64_t>(
+                    (time_end_all.tv_nsec - time_start_all.tv_nsec) +
+                    1000000000 * (time_end_all.tv_sec - time_start_all.tv_sec));
+
+            std::cerr << "all time: " << calc_time_all << " ms" << std::endl;
         }
 
         if (mj_data->time>=simEndTime)

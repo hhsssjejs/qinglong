@@ -12,7 +12,9 @@ Feel free to use in any purpose, and cite OpenLoong-Dynamics-Control in any styl
 Pin_KinDyn::Pin_KinDyn(std::string urdf_pathIn) {
     pinocchio::JointModelFreeFlyer root_joint;
     pinocchio::urdf::buildModel(urdf_pathIn,root_joint,model_biped);
+    pinocchio::urdf::buildModel(urdf_pathIn,root_joint,model_biped_copy);
     pinocchio::urdf::buildModel(urdf_pathIn,model_biped_fixed);
+    data_biped_copy=pinocchio::Data(model_biped_copy);
     data_biped=pinocchio::Data(model_biped);
     data_biped_fixed=pinocchio::Data(model_biped_fixed);
     model_nv=model_biped.nv;
@@ -92,33 +94,15 @@ void Pin_KinDyn::dataBusRead(const DataBus &robotState) {
     dq.block(0,0,3,1)=robotState.base_rot.transpose()*dq.block(0,0,3,1);
     dq.block(3,0,3,1)=robotState.base_rot.transpose()*dq.block(3,0,3,1);
     ddq=robotState.ddq;
-    line_acc_ << robotState.baseAcc[0], robotState.baseAcc[1], robotState.baseAcc[2];
+    line_acc_[0] = robotState.baseAcc[0];
+    line_acc_[1] = robotState.baseAcc[1];
+    line_acc_[2] = robotState.baseAcc[2];
 
+    q_copy = q;
+    dq_copy = dq;
+    q_copy.head(3) = Eigen::Vector3d::Zero();
+    dq_copy.head(3) = Eigen::Vector3d::Zero();
 
-    if (robotState.motionState!=DataBus::Stand && robotState.legState == DataBus::LSt) {
-        stance_phase_.clear();
-        stance_phase_.push_back(true);  
-        stance_phase_.push_back(false);
-    } else if (robotState.motionState!=DataBus::Stand && robotState.legState == DataBus::RSt) {
-        stance_phase_.clear();
-        stance_phase_.push_back(false); 
-        stance_phase_.push_back(true);  
-    } else {
-        stance_phase_.clear();
-        stance_phase_.push_back(true);  
-        stance_phase_.push_back(true);  
-    }
-    Eigen::Vector3d w_ = dq.segment(3,3);
-    end_rel_pos_world_[0] = base_rot * fe_l_pos_body;
-    end_rel_pos_world_[1] = base_rot * fe_r_pos_body;
-    end_rel_vel_world_[0] = base_rot * (fe_l_vel + w_.cross(fe_l_pos_body));
-    end_rel_vel_world_[1] = base_rot * (fe_r_vel + w_.cross(fe_r_pos_body));
-    std::cerr << "stance left:  " << stance_phase_[0]
-              << "  right:" << stance_phase_[1] << std::endl;
-    std::cerr << "pos left:  " << fe_l_pos_body[0].transpose()
-              << "  right:" << fe_l_pos_body[1].transpose() << std::endl;
-    std::cerr << "vel left:  " << end_rel_vel_world_[0].transpose()
-              << "  right:" << end_rel_vel_world_[1].transpose() << std::endl;
 }
 
 void Pin_KinDyn::dataBusWrite(DataBus &robotState) {
@@ -185,10 +169,49 @@ void Pin_KinDyn::dataBusWriteOdemetry(DataBus &robotState) {
               << std::endl;
 } 
 
+void Pin_KinDyn::reset_odometry(){
+    KalmanFilterEstimate_->resetEstimate();
+}
 
 
+void Pin_KinDyn::update_odometry(DataBus &robotState) {
 
-void Pin_KinDyn::update_odometry() {
+  if (robotState.motionState != DataBus::Stand &&
+      robotState.legState == DataBus::LSt) {
+    stance_phase_.clear();
+    stance_phase_.push_back(true);
+    stance_phase_.push_back(false);
+  } else if (robotState.motionState != DataBus::Stand &&
+             robotState.legState == DataBus::RSt) {
+    stance_phase_.clear();
+    stance_phase_.push_back(false);
+    stance_phase_.push_back(true);
+  } else {
+    stance_phase_.clear();
+    stance_phase_.push_back(true);
+    stance_phase_.push_back(true);
+  }
+  std::cerr << "stance left:  " << stance_phase_[0]
+            << "  right:" << stance_phase_[1] << std::endl;
+
+  Eigen::Vector3d w_ = dq.segment(3,3);
+  end_rel_pos_world_[0] = base_rot * fe_l_pos_body;
+  end_rel_pos_world_[1] = base_rot * fe_r_pos_body;
+  end_rel_vel_world_[0] = base_rot * (fe_l_vel + w_.cross(fe_l_pos_body));
+  end_rel_vel_world_[1] = base_rot * (fe_r_vel + w_.cross(fe_r_pos_body));
+  std::cerr << "pos left:  " << end_rel_pos_world_[0].transpose()
+            << "  right:" << end_rel_pos_world_[1].transpose() << std::endl;
+  std::cerr << "vel left:  " << end_rel_vel_world_[0].transpose()
+            << "  right:" << end_rel_vel_world_[1].transpose() << std::endl;
+
+  end_rel_pos_world_[0] = fe_l_pos_final;
+  end_rel_pos_world_[1] = fe_r_pos_final;
+  end_rel_vel_world_[0] = fe_l_vel_final;
+  end_rel_vel_world_[1] = fe_r_vel_final;
+  std::cerr << "pos left:  " << end_rel_pos_world_[0].transpose()
+            << "  right:" << end_rel_pos_world_[1].transpose() << std::endl;
+  std::cerr << "vel left:  " << end_rel_vel_world_[0].transpose()
+            << "  right:" << end_rel_vel_world_[1].transpose() << std::endl;
 
   KalmanFilterEstimate_->update(base_rot, line_acc_, stance_phase_,
                                 end_rel_pos_world_, end_rel_vel_world_);
@@ -197,6 +220,17 @@ void Pin_KinDyn::update_odometry() {
 
 // update jacobians and joint positions
 void Pin_KinDyn::computeJ_dJ() {
+    pinocchio::forwardKinematics(model_biped_copy, data_biped_copy, q_copy, dq_copy);
+    pinocchio::updateFramePlacements(model_biped_copy, data_biped_copy);
+    pinocchio::Motion motion_l_final = pinocchio::getFrameVelocity(
+        model_biped_copy, data_biped_copy, l_ankle_joint, pinocchio::LOCAL_WORLD_ALIGNED);
+    fe_l_vel_final = motion_l_final.linear();
+    pinocchio::Motion motion_r_final = pinocchio::getFrameVelocity(
+        model_biped_copy, data_biped_copy, r_ankle_joint, pinocchio::LOCAL_WORLD_ALIGNED);
+    fe_r_vel_final = motion_r_final.linear();
+    fe_l_pos_final = data_biped_copy.oMi[l_ankle_joint].translation();
+    fe_r_pos_final = data_biped_copy.oMi[r_ankle_joint].translation();
+
     pinocchio::forwardKinematics(model_biped,data_biped,q);
     pinocchio::jacobianCenterOfMass(model_biped, data_biped, q, true);
 //    pinocchio::computeJointJacobians(model_biped,data_biped,q);
@@ -259,10 +293,12 @@ void Pin_KinDyn::computeJ_dJ() {
     J_hip_link=J_hip_link*Mpj;
     Jcom=Jcom*Mpj;
 
-    Eigen::VectorXd q_fixed;
+    Eigen::VectorXd q_fixed, dq_fixed;    
     q_fixed=q.block(7,0,model_biped_fixed.nv,1);
-    pinocchio::forwardKinematics(model_biped_fixed,data_biped_fixed,q_fixed);
-    pinocchio::updateGlobalPlacements(model_biped_fixed,data_biped_fixed);
+    dq_fixed = dq.block(6,0,model_biped_fixed.nv,1);
+    pinocchio::forwardKinematics(model_biped_fixed, data_biped_fixed, q_fixed, dq_fixed);
+    pinocchio::updateGlobalPlacements(model_biped_fixed, data_biped_fixed);
+    pinocchio::updateFramePlacements(model_biped_fixed, data_biped_fixed);
     fe_l_pos_body=data_biped_fixed.oMi[l_ankle_joint_fixed].translation();
     fe_r_pos_body=data_biped_fixed.oMi[r_ankle_joint_fixed].translation();
     fe_l_rot_body=data_biped_fixed.oMi[l_ankle_joint_fixed].rotation();

@@ -39,21 +39,22 @@ public:
 
     Eigen::VectorXd tauJointOld;
     std::string urdf_path;
-    pinocchio::Model model_biped;
+    pinocchio::Model model_biped, model_biped_copy;
     pinocchio::Model model_biped_fixed;
     int model_nv;
     pinocchio::JointIndex r_ankle_joint, l_ankle_joint, base_joint, r_hip_joint, l_hip_joint, r_hip_roll_joint, l_hip_roll_joint, waist_yaw_joint;
     pinocchio::JointIndex r_ankle_joint_fixed, l_ankle_joint_fixed, r_hip_joint_fixed, l_hip_joint_fixed;
     pinocchio::JointIndex r_hand_joint, l_hand_joint,r_hand_joint_fixed, l_hand_joint_fixed;
-    Eigen::VectorXd q,dq,ddq;
+    Eigen::VectorXd q, dq, ddq, q_copy, dq_copy;
     Eigen::Matrix3d Rcur;
     Eigen::Quaternion<double> quatCur;
     Eigen::Matrix<double,6,-1> J_r, J_l, J_hd_r, J_hd_l, J_base, J_hip_link;
     Eigen::Matrix<double,6,-1> dJ_r,dJ_l, dJ_hd_r, dJ_hd_l, dJ_base, dJ_hip_link;
     Eigen::Matrix<double,3,-1> Jcom;
     Eigen::Vector3d fe_r_pos, fe_l_pos, base_pos;    // foot-end position in world frame
-    Eigen::Vector3d fe_l_vel, fe_r_vel;
+    Eigen::Vector3d fe_l_vel, fe_r_vel, fe_l_vel_final, fe_r_vel_final;
     Eigen::Vector3d fe_r_pos_body, fe_l_pos_body;  // foot-end position in body frame
+    Eigen::Vector3d fe_r_pos_final, fe_l_pos_final;  // foot-end position in body frame
     Eigen::Vector3d hd_r_pos, hd_l_pos;  // hand position in world frame
     Eigen::Vector3d hd_r_pos_body, hd_l_pos_body; // hand position in body frame
     Eigen::Vector3d hip_r_pos, hip_l_pos, hip_link_pos;
@@ -90,7 +91,8 @@ public:
     void workspaceConstraint(Eigen::VectorXd &qFT, Eigen::VectorXd &tauJointFT);
 
     std::shared_ptr<KalmanFilterEstimate> KalmanFilterEstimate_;
-    void update_odometry();
+    void update_odometry(DataBus &robotState);
+    void reset_odometry();
     void dataBusWriteOdemetry(DataBus &robotState);
     Eigen::Vector3d line_acc_;
     std::vector<bool> stance_phase_;
@@ -98,6 +100,6 @@ public:
     std::vector<Eigen::Vector3d> end_rel_vel_world_;
     Eigen::VectorXd body_state;
 private:
-    pinocchio::Data data_biped, data_biped_fixed;
+    pinocchio::Data data_biped, data_biped_fixed, data_biped_copy;
 
 };

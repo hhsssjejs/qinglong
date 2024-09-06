@@ -24,9 +24,12 @@ KalmanFilterEstimate::KalmanFilterEstimate()
   vs_.setZero();
   a_.setZero();
   a_.block(0, 0, 3, 3) = Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  a_.block(0, 3, 3, 3) = dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();
   a_.block(3, 3, 3, 3) = Eigen::Matrix<scalar_t, 3, 3>::Identity();
   a_.block(6, 6, 6, 6) = Eigen::Matrix<scalar_t, 6, 6>::Identity();
   b_.setZero();
+  b_.block(0, 0, 3, 3) = 0.5 * dt * dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();  // additional
+  b_.block(3, 0, 3, 3) = dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();
 
   Eigen::Matrix<scalar_t, Eigen::Dynamic, Eigen::Dynamic> c1(3, 6);
   c1 << Eigen::Matrix<scalar_t, 3, 3>::Identity(), Eigen::Matrix<scalar_t, 3, 3>::Zero();
@@ -43,15 +46,12 @@ KalmanFilterEstimate::KalmanFilterEstimate()
   p_.setIdentity();
   p_ = 100. * p_;
   q_.setIdentity();
-  r_.setIdentity();
-  feetHeights_.setZero(numContacts); 
-
-  a_.block(0, 3, 3, 3) = dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();
-  b_.block(0, 0, 3, 3) = 0.5 * dt * dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();  // additional
-  b_.block(3, 0, 3, 3) = dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();
   q_.block(0, 0, 3, 3) = (dt / 20.f) * Eigen::Matrix<scalar_t, 3, 3>::Identity();
   q_.block(3, 3, 3, 3) = (dt * 9.81f / 20.f) * Eigen::Matrix<scalar_t, 3, 3>::Identity();
   q_.block(6, 6, 6, 6) = dt * Eigen::Matrix<scalar_t, 6, 6>::Identity();    
+
+  r_.setIdentity();
+  feetHeights_.setZero(numContacts); 
 }
 
 void KalmanFilterEstimate::update(
@@ -147,6 +147,43 @@ void KalmanFilterEstimate::update(
   }
 }
 
+
+void KalmanFilterEstimate::resetEstimate()
+{
+  xHat_.setZero();
+  ps_.setZero();
+  vs_.setZero();
+  a_.setZero();
+  a_.block(0, 0, 3, 3) = Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  a_.block(0, 3, 3, 3) = dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  a_.block(3, 3, 3, 3) = Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  a_.block(6, 6, 6, 6) = Eigen::Matrix<scalar_t, 6, 6>::Identity();
+  b_.setZero();
+  b_.block(0, 0, 3, 3) = 0.5 * dt * dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();  // additional
+  b_.block(3, 0, 3, 3) = dt * Eigen::Matrix<scalar_t, 3, 3>::Identity();
+
+  Eigen::Matrix<scalar_t, Eigen::Dynamic, Eigen::Dynamic> c1(3, 6);
+  c1 << Eigen::Matrix<scalar_t, 3, 3>::Identity(), Eigen::Matrix<scalar_t, 3, 3>::Zero();
+  Eigen::Matrix<scalar_t, Eigen::Dynamic, Eigen::Dynamic> c2(3, 6);
+  c2 << Eigen::Matrix<scalar_t, 3, 3>::Zero(), Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  c_.setZero();
+  c_.block(0, 0, 3, 6) = c1;
+  c_.block(3, 0, 3, 6) = c1;
+  c_.block(0, 6, 6, 6) = -Eigen::Matrix<scalar_t, 12, 12>::Identity();
+  c_.block(6, 0, 3, 6) = c2;
+  c_.block(9, 0, 3, 6) = c2;
+  c_(13, 11) = 1.0;
+  c_(12, 8) = 1.0;
+  p_.setIdentity();
+  p_ = 100. * p_;
+  q_.setIdentity();
+  q_.block(0, 0, 3, 3) = (dt / 20.f) * Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  q_.block(3, 3, 3, 3) = (dt * 9.81f / 20.f) * Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  q_.block(6, 6, 6, 6) = dt * Eigen::Matrix<scalar_t, 6, 6>::Identity();    
+
+  r_.setIdentity();
+  feetHeights_.setZero(numContacts); 
+}
 
 // void KalmanFilterEstimate::loadSettings(const std::string& taskFile, bool verbose)
 // {
