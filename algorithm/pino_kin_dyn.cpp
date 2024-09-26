@@ -209,8 +209,10 @@ void Pin_KinDyn::update_odometry(DataBus &robotState) {
 
   end_rel_pos_world_[0] = fe_l_pos_final;
   end_rel_pos_world_[1] = fe_r_pos_final;
-  end_rel_vel_world_[0] = fe_l_vel_final_2;
-  end_rel_vel_world_[1] = fe_r_vel_final_2;
+//   end_rel_vel_world_[0] = fe_l_vel_final_2;
+//   end_rel_vel_world_[1] = fe_r_vel_final_2;
+  end_rel_vel_world_[0] = fe_l_vel_final;
+  end_rel_vel_world_[1] = fe_r_vel_final;
 //   std::cerr << "pos left:  " << end_rel_pos_world_[0].transpose()
 //             << "  right:" << end_rel_pos_world_[1].transpose() << std::endl;
 //   std::cerr << "vel left:  " << end_rel_vel_world_[0].transpose()
@@ -225,12 +227,19 @@ void Pin_KinDyn::update_odometry(DataBus &robotState) {
 void Pin_KinDyn::computeJ_dJ() {
     pinocchio::forwardKinematics(model_biped_copy, data_biped_copy, q_copy, dq_copy);
     pinocchio::updateFramePlacements(model_biped_copy, data_biped_copy);
-    // pinocchio::Motion motion_l_final = pinocchio::getFrameVelocity(
-    //     model_biped_copy, data_biped_copy, l_ankle_joint, pinocchio::LOCAL_WORLD_ALIGNED);
-    // fe_l_vel_final = motion_l_final.linear();
-    // pinocchio::Motion motion_r_final = pinocchio::getFrameVelocity(
-    //     model_biped_copy, data_biped_copy, r_ankle_joint, pinocchio::LOCAL_WORLD_ALIGNED);
-    // fe_r_vel_final = motion_r_final.linear();
+
+    // 获取左脚踝关节在自身局部坐标系中的空间速度
+    pinocchio::Motion v_l_local = data_biped_copy.v[l_ankle_joint];
+    // 将空间速度转换到世界坐标系
+    pinocchio::Motion v_l_world = data_biped_copy.oMi[l_ankle_joint].act(v_l_local);
+
+    // 提取线速度
+    fe_l_vel_final = v_l_world.linear();
+
+    // 获取右脚踝关节的速度
+    pinocchio::Motion v_r_local = data_biped_copy.v[r_ankle_joint];
+    pinocchio::Motion v_r_world = data_biped_copy.oMi[r_ankle_joint].act(v_r_local);
+    fe_r_vel_final = v_r_world.linear();
 
     pinocchio::Motion motion_l_final = pinocchio::getFrameVelocity(
         model_biped_copy, data_biped_copy, l_ankle_frame, pinocchio::LOCAL_WORLD_ALIGNED);
