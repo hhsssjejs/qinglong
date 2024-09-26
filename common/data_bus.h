@@ -21,6 +21,8 @@ struct DataBus{
     double fR[3];
     double basePos[3];
     double baseLinVel[3]; // velocity of the basePos
+    double Mujoco_basePos[3];
+    double Mujoco_baseLinVel[3]; // velocity of the basePos
     double baseAcc[3];   // baseAcc of the base link
     double baseAngVel[3];  // angular velocity of the base link
     std::vector<double> motors_pos_cur;

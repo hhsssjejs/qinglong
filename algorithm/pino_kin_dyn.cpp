@@ -64,6 +64,9 @@ Pin_KinDyn::Pin_KinDyn(std::string urdf_pathIn) {
     base_joint=model_biped.getJointId("root_joint");
     waist_yaw_joint=model_biped.getJointId("J_waist_yaw");
 
+    l_ankle_frame=model_biped_copy.getFrameId("Link_ankle_l_roll");
+    r_ankle_frame=model_biped_copy.getFrameId("Link_ankle_r_roll");
+
 
     // read joint pvt parameters
     Json::Reader reader;
@@ -157,12 +160,12 @@ void Pin_KinDyn::dataBusWrite(DataBus &robotState) {
 }
 
 void Pin_KinDyn::dataBusWriteOdemetry(DataBus &robotState) {
-    // robotState.basePos[0]=body_state[0];
-    // robotState.basePos[1]=body_state[1];
-    // robotState.basePos[2]=body_state[2];
-    // robotState.baseLinVel[0]=body_state[3];
-    // robotState.baseLinVel[1]=body_state[4];
-    // robotState.baseLinVel[2]=body_state[5];
+    robotState.basePos[0]=body_state[0];
+    robotState.basePos[1]=body_state[1];
+    robotState.basePos[2]=body_state[2];
+    robotState.baseLinVel[0]=body_state[3];
+    robotState.baseLinVel[1]=body_state[4];
+    robotState.baseLinVel[2]=body_state[5];
     std::cerr << "actual pos: " << body_state.segment(0, 3).transpose()
               << std::endl;
     std::cerr << "actual vel: " << body_state.segment(3, 3).transpose()
@@ -191,8 +194,8 @@ void Pin_KinDyn::update_odometry(DataBus &robotState) {
     stance_phase_.push_back(true);
     stance_phase_.push_back(true);
   }
-  std::cerr << "stance left:  " << stance_phase_[0]
-            << "  right:" << stance_phase_[1] << std::endl;
+//   std::cerr << "stance left:  " << stance_phase_[0]
+//             << "  right:" << stance_phase_[1] << std::endl;
 
 //   Eigen::Vector3d w_ = dq.segment(3,3);
 //   end_rel_pos_world_[0] = base_rot * fe_l_pos_body;
@@ -206,12 +209,12 @@ void Pin_KinDyn::update_odometry(DataBus &robotState) {
 
   end_rel_pos_world_[0] = fe_l_pos_final;
   end_rel_pos_world_[1] = fe_r_pos_final;
-  end_rel_vel_world_[0] = fe_l_vel_final;
-  end_rel_vel_world_[1] = fe_r_vel_final;
+  end_rel_vel_world_[0] = fe_l_vel_final_2;
+  end_rel_vel_world_[1] = fe_r_vel_final_2;
 //   std::cerr << "pos left:  " << end_rel_pos_world_[0].transpose()
 //             << "  right:" << end_rel_pos_world_[1].transpose() << std::endl;
-  std::cerr << "vel left:  " << end_rel_vel_world_[0].transpose()
-            << "  right:" << end_rel_vel_world_[1].transpose() << std::endl;
+//   std::cerr << "vel left:  " << end_rel_vel_world_[0].transpose()
+//             << "  right:" << end_rel_vel_world_[1].transpose() << std::endl;
 
   KalmanFilterEstimate_->update(base_rot, line_acc_, stance_phase_,
                                 end_rel_pos_world_, end_rel_vel_world_);
@@ -222,12 +225,21 @@ void Pin_KinDyn::update_odometry(DataBus &robotState) {
 void Pin_KinDyn::computeJ_dJ() {
     pinocchio::forwardKinematics(model_biped_copy, data_biped_copy, q_copy, dq_copy);
     pinocchio::updateFramePlacements(model_biped_copy, data_biped_copy);
+    // pinocchio::Motion motion_l_final = pinocchio::getFrameVelocity(
+    //     model_biped_copy, data_biped_copy, l_ankle_joint, pinocchio::LOCAL_WORLD_ALIGNED);
+    // fe_l_vel_final = motion_l_final.linear();
+    // pinocchio::Motion motion_r_final = pinocchio::getFrameVelocity(
+    //     model_biped_copy, data_biped_copy, r_ankle_joint, pinocchio::LOCAL_WORLD_ALIGNED);
+    // fe_r_vel_final = motion_r_final.linear();
+
     pinocchio::Motion motion_l_final = pinocchio::getFrameVelocity(
-        model_biped_copy, data_biped_copy, l_ankle_joint, pinocchio::LOCAL_WORLD_ALIGNED);
-    fe_l_vel_final = motion_l_final.linear();
+        model_biped_copy, data_biped_copy, l_ankle_frame, pinocchio::LOCAL_WORLD_ALIGNED);
+    fe_l_vel_final_2 = motion_l_final.linear();
+
     pinocchio::Motion motion_r_final = pinocchio::getFrameVelocity(
-        model_biped_copy, data_biped_copy, r_ankle_joint, pinocchio::LOCAL_WORLD_ALIGNED);
-    fe_r_vel_final = motion_r_final.linear();
+        model_biped_copy, data_biped_copy, r_ankle_frame, pinocchio::LOCAL_WORLD_ALIGNED);
+    fe_r_vel_final_2 = motion_r_final.linear();
+
     fe_l_pos_final = data_biped_copy.oMi[l_ankle_joint].translation();
     fe_r_pos_final = data_biped_copy.oMi[r_ankle_joint].translation();
 

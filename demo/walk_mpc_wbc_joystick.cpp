@@ -88,17 +88,19 @@ int main(int argc, char **argv) {
 
     // register variable name for data logger
     logger.addIterm("simTime",1);
-    logger.addIterm("motor_pos_des",30);
-    logger.addIterm("motor_pos_cur",30);
-    logger.addIterm("motor_vel_des",30);
-    logger.addIterm("motor_vel_cur",30);
-    logger.addIterm("motor_tor_des",30);
-    logger.addIterm("rpyVal",3);
-    logger.addIterm("base_omega_W",3);
+    // logger.addIterm("motor_pos_des",30);
+    // logger.addIterm("motor_pos_cur",30);
+    // logger.addIterm("motor_vel_des",30);
+    // logger.addIterm("motor_vel_cur",30);
+    // logger.addIterm("motor_tor_des",30);
+    // logger.addIterm("rpyVal",3);
+    // logger.addIterm("base_omega_W",3);
     logger.addIterm("gpsVal",3);
     logger.addIterm("base_vel",3);
-	logger.addIterm("dX_cal",12);
-	logger.addIterm("Ufe",12);
+    logger.addIterm("act_pos",3);
+    logger.addIterm("act_vel",3);
+	// logger.addIterm("dX_cal",12);
+	// logger.addIterm("Ufe",12);
     logger.finishItermAdding();
 
     //// -------------------------- main loop --------------------------------
@@ -297,17 +299,20 @@ int main(int argc, char **argv) {
             // data save
             logger.startNewLine();
             logger.recItermData("simTime", simTime);
-            logger.recItermData("motor_pos_des", RobotState.motors_pos_des);
-            logger.recItermData("motor_pos_cur", RobotState.motors_pos_cur);
-            logger.recItermData("motor_vel_des", RobotState.motors_vel_des);
-            logger.recItermData("motor_vel_cur", RobotState.motors_vel_cur);
-            logger.recItermData("motor_tor_des", RobotState.motors_tor_des);
-            logger.recItermData("rpyVal", RobotState.rpy);
-            logger.recItermData("base_omega_W", RobotState.base_omega_W);
-            logger.recItermData("gpsVal", RobotState.basePos);
-            logger.recItermData("base_vel", RobotState.dq.block<3, 1>(0, 0));
-			logger.recItermData("dX_cal",RobotState.dX_cal);
-			logger.recItermData("Ufe",RobotState.Fr_ff);
+            // logger.recItermData("motor_pos_des", RobotState.motors_pos_des);
+            // logger.recItermData("motor_pos_cur", RobotState.motors_pos_cur);
+            // logger.recItermData("motor_vel_des", RobotState.motors_vel_des);
+            // logger.recItermData("motor_vel_cur", RobotState.motors_vel_cur);
+            // logger.recItermData("motor_tor_des", RobotState.motors_tor_des);
+            // logger.recItermData("rpyVal", RobotState.rpy);
+            // logger.recItermData("base_omega_W", RobotState.base_omega_W);
+            logger.recItermData("gpsVal", RobotState.Mujoco_basePos);
+            logger.recItermData("base_vel", RobotState.Mujoco_baseLinVel);
+            logger.recItermData("act_pos", RobotState.basePos);
+            logger.recItermData("act_vel", RobotState.baseLinVel);
+        
+			// logger.recItermData("dX_cal",RobotState.dX_cal);
+			// logger.recItermData("Ufe",RobotState.Fr_ff);
             logger.finishLine();
             timespec time_end_all;
             clock_gettime(CLOCK_MONOTONIC, &time_end_all);

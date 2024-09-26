@@ -37,6 +37,8 @@ public:
     Eigen::VectorXd motorMaxPos;
     Eigen::VectorXd motorMinPos;
 
+    int l_ankle_frame, r_ankle_frame;
+
     Eigen::VectorXd tauJointOld;
     std::string urdf_path;
     pinocchio::Model model_biped, model_biped_copy;
@@ -52,7 +54,7 @@ public:
     Eigen::Matrix<double,6,-1> dJ_r,dJ_l, dJ_hd_r, dJ_hd_l, dJ_base, dJ_hip_link;
     Eigen::Matrix<double,3,-1> Jcom;
     Eigen::Vector3d fe_r_pos, fe_l_pos, base_pos;    // foot-end position in world frame
-    Eigen::Vector3d fe_l_vel, fe_r_vel, fe_l_vel_final, fe_r_vel_final;
+    Eigen::Vector3d fe_l_vel, fe_r_vel, fe_l_vel_final, fe_r_vel_final, fe_l_vel_final_2, fe_r_vel_final_2;
     Eigen::Vector3d fe_r_pos_body, fe_l_pos_body;  // foot-end position in body frame
     Eigen::Vector3d fe_r_pos_final, fe_l_pos_final;  // foot-end position in body frame
     Eigen::Vector3d hd_r_pos, hd_l_pos;  // hand position in world frame

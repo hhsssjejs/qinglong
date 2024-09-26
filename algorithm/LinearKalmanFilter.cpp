@@ -54,7 +54,6 @@ KalmanFilterEstimate::KalmanFilterEstimate()
   feetHeights_.setZero(numContacts); 
   feetHeights_[0] = 0.0442;
   feetHeights_[1] = 0.0442;
-
 }
 
 void KalmanFilterEstimate::update(
@@ -86,11 +85,11 @@ void KalmanFilterEstimate::update(
 
   // the covariance of the process noise
   Eigen::Matrix<double, 12, 12> q = Eigen::Matrix<double, 12, 12>::Identity();
-  std::cerr << "Q: " << std::setprecision(10) << q << std::endl;
+  // std::cerr << "Q: " << std::setprecision(10) << q << std::endl;
   q.block(0, 0, 3, 3) = q_.block(0, 0, 3, 3) * imuProcessNoisePosition_;
   q.block(3, 3, 3, 3) = q_.block(3, 3, 3, 3) * imuProcessNoiseVelocity_;
   q.block(6, 6, 6, 6) = q_.block(6, 6, 6, 6) * footProcessNoisePosition_;
-  std::cerr << "Q: " << std::setprecision(10) << q << std::endl;
+  // std::cerr << "Q: " << std::setprecision(10) << q << std::endl;
   // the covariance of the observation noise
   Eigen::Matrix<double, 14, 14> r = Eigen::Matrix<double, 14, 14>::Identity();
   r.block(0, 0, 6, 6) = r_.block(0, 0, 6, 6) * footSensorNoisePosition_;
@@ -98,16 +97,16 @@ void KalmanFilterEstimate::update(
   const int fn = numContacts;
   r.block(12, 12, fn, fn) = r_.block(12, 12, fn, fn) * footHeightSensorNoise_;
 
-  std::cerr << " 0.5 * dt * dt  : " << 0.5 * dt * dt << std::endl;
+  // std::cerr << " 0.5 * dt * dt  : " << 0.5 * dt * dt << std::endl;
 
-  std::cerr << "imuProcessNoisePosition_: " << imuProcessNoisePosition_ << std::endl;
-  std::cerr << "imuProcessNoiseVelocity_ " << imuProcessNoiseVelocity_ << std::endl;
-  std::cerr << "footProcessNoisePosition_: " << footProcessNoisePosition_ << std::endl;
+  // std::cerr << "imuProcessNoisePosition_: " << imuProcessNoisePosition_ << std::endl;
+  // std::cerr << "imuProcessNoiseVelocity_ " << imuProcessNoiseVelocity_ << std::endl;
+  // std::cerr << "footProcessNoisePosition_: " << footProcessNoisePosition_ << std::endl;
   // std::cerr << "A: " << a_ << std::endl;
-  b_(0,0)= 0.5 * dt * dt;
-  std::cerr << "B " << std::setprecision(16) << b_ << std::endl;
+
+  // std::cerr << "B " << std::setprecision(16) << b_ << std::endl;
   // std::cerr << "C: " << c_ << std::endl;
-  std::cerr << "Q——: " << q_ << std::endl;
+  // std::cerr << "Q——: " << q_ << std::endl;
   // std::cerr << "R——: " << r_ << std::endl;
   // std::cerr << "Q: " << std::setprecision(10) << q << std::endl;
   // std::cerr << "R: " << r << std::endl;
